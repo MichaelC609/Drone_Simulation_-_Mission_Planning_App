@@ -1,4 +1,4 @@
-Drone Simulation & Mission Planning App: System Design
+**Drone Simulation & Mission Planning App: **
 
 
 1. Project Objectives & Features
@@ -59,7 +59,7 @@ Mission status becomes INITIALIZING(has not started yet)
 Publish Event
 Backend publishes the event to Kafka
 
-3) Kafka Event System
+**3) Kafka Event System**
 Purpose for Kafka: Kafka acts as a distributed event bus, telemetry pipeline and an asynchronous communication layer
 Kafka creates a Publisher/Consumer system where the backend creates and publishes and event for the Simulation layer to then consume the event
 This allows the following benefits:
