@@ -1,4 +1,4 @@
-**Drone Simulation & Mission Planning App: **
+**Drone Simulation & Mission Planner: **
 
 
 1. Project Objectives & Features
