@@ -13,14 +13,14 @@ from datetime import datetime
 import uuid
 
 ########### Validation Methods ###########
-def validBatteryRange(batteryValue: int) -> int:
+def validBatteryRange(batteryValue: float) -> float:
     if (batteryValue < 0) or (batteryValue > 100):
         raise ValueError(f"{batteryValue} is not a valid battery percentage")
     
     return batteryValue
 
 def validHeadingRange(degreeValue: float) -> float:
-    if (degreeValue < 0) or (degreeValue > 360):
+    if (degreeValue < 0) or (degreeValue >= 360):
         raise ValueError(f"{degreeValue} is not a valid degree range")
     
     return degreeValue
