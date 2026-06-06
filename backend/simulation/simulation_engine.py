@@ -5,6 +5,9 @@
 #################################################################################
 
 
+from backend.simulation.exceptions import HandlerNotFoundException
+
+
 class SimulationEngine:
     #constructor method
     def __init__(self, state_manager, command_queue, handler_registry, timestep):
@@ -18,8 +21,31 @@ class SimulationEngine:
         self.dt = timestep  #fixed timestep value
 
     def tick(self):
-        self.simulation_time += self.dt
-        return self.simulation_time
+        #acquire command
+        if self.active_command is None:
+            if not self.command_queue.isEmpty():
+                self.active_command = self.command_queue.dequeue()
+
+        #execute command
+        if self.active_command is not None:
+            command_type = self.active_command.command_type
+            handler = self.handler_registry.get(command_type)
+
+            if handler is None:
+                raise HandlerNotFoundException(
+                    f"No handler registered for {command_type}"
+                )
+            
+            completed = handler.execute(
+                self.active_command,
+                self.state_manager,
+                self.dt
+            )
+
+            if completed:
+                self.active_command = None
+
+            self.simulation_time += self.dt
 
     def get_simulation_time(self):
         return self.simulation_time
