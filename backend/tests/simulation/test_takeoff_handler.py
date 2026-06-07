@@ -14,15 +14,16 @@ if str(PROJECT_ROOT) not in sys.path:
 if str(BACKEND_ROOT) not in sys.path:
 	sys.path.insert(0, str(BACKEND_ROOT))
 
-from drone.models import DroneStatusEnum as DroneStatus
+from drone.models import DroneStatusEnum as DroneStatus, DroneState
 
 from simulation.handlers import takeoff_handler
 
 
 class _StubStateManager:
-	def __init__(self, altitude=0.0):
+	def __init__(self, altitude=0.0, battery=100.0):
 		self.altitude = altitude
 		self.status = DroneStatus.IDLE
+		self.battery = battery
 
 	def getState(self):
 		return types.SimpleNamespace(
@@ -68,3 +69,21 @@ def test_takeoff_completion_one_tick():
 	assert state_manager.altitude == pytest.approx(10.0)
 	assert completed is True
 	assert state_manager.status == DroneStatus.ACTIVE
+
+def test_takeoff_battery_drain():
+	#get current battery(default value)
+	state_manager = _StubStateManager(battery=100.0)
+
+	#create sample command
+	command = _make_takeoff_command()
+	dt = 0.05
+
+	#simulate one tick has passed
+	takeoff_handler.execute(
+		command, state_manager, dt
+	)
+
+	#test resulting value
+	assert state_manager.battery == pytest.approx(99.9)
+	assert state_manager.status == DroneStatus.ACTIVE
+	assert state_manager.altitude == pytest.approx(0.1)

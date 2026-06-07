@@ -29,35 +29,36 @@ if "state_manager" not in sys.modules:
     sys.modules["state_manager"] = state_manager_module
 
 
-from drone.commands import CommandTypeEnum, TakeoffCommand, TakeoffPayload
+from drone.commands import (
+    CommandTypeEnum,
+    TakeoffCommand,
+    TakeoffPayload,
+    LandCommand,
+    LandingPayload,
+)
 from drone.state_manager import StateManager
 from simulation.command_queue import CommandQueue
-from simulation.handlers import takeoff_handler
+from simulation.handlers import takeoff_handler, land_handler
 from simulation.simulation_engine import SimulationEngine
+from drone.models import DroneStatusEnum
 
+################################
+#       UNIT TESTS             #
+################################
 
-class _TakeoffHandlerAdapter:
+class _FunctionHandlerAdapter:
+    def __init__(self, handler_func):
+        self._handler_func = handler_func
+
     def execute(self, command, state_manager, dt):
-        takeoff_handler.commands.Takeoff_Payload = types.SimpleNamespace(
-            target_altitude=command.payload.target_altitude,
-            takeoff_speed=command.payload.takeoff_speed,
-        )
-
-        class _StateManagerShim:
-            @staticmethod
-            def getState():
-                return state_manager.getState()
-
-            @staticmethod
-            def updateState(new_altitude):
-                return state_manager.updateState({"position": {"z": new_altitude}})
-
-        takeoff_handler.StateManager = _StateManagerShim
-
-        return takeoff_handler.execute(command, state_manager, dt)
+        return self._handler_func(command, state_manager, dt)
 
 
-def test_end_to_end_takeoff_simulation_reaches_target_altitude():
+################################
+#       Integration TESTS      #
+################################
+
+def test_integration_takeoff_reaches_target_alt():
     state_manager = StateManager()
     queue = CommandQueue()
 
@@ -68,7 +69,7 @@ def test_end_to_end_takeoff_simulation_reaches_target_altitude():
     )
 
     handler_registry = {
-        CommandTypeEnum.TAKEOFF: _TakeoffHandlerAdapter(),
+        CommandTypeEnum.TAKEOFF: _FunctionHandlerAdapter(takeoff_handler.execute),
     }
 
     engine = SimulationEngine(
@@ -83,4 +84,83 @@ def test_end_to_end_takeoff_simulation_reaches_target_altitude():
 
     assert state_manager.getState().position.z == pytest.approx(1.0)
     assert engine.active_command is None
+
+    #verify battery and state
+    state = state_manager.getState()
+    assert state.status == DroneStatusEnum.ACTIVE
+    assert state.battery < 100
+
+def test_integration_landing_reaches_ground():
+    #setup
+    state_manager = StateManager()
+    queue = CommandQueue()
+    
+    state_manager.updateState(
+        {
+            "position": {"z": 1.0},
+            "status": DroneStatusEnum.ACTIVE
+        }
+    )
+
+    queue.enqueue(
+        LandCommand(payload=LandingPayload(landing_speed=1.0))
+    )
+
+    handler_registry = {
+        CommandTypeEnum.LAND: _FunctionHandlerAdapter(land_handler.execute),
+    }
+
+    engine = SimulationEngine(
+        state_manager=state_manager,
+        command_queue=queue,
+        handler_registry=handler_registry,
+        timestep=0.05,
+    )
+
+    while engine.active_command is not None or not queue.isEmpty():
+        engine.tick()
+
+    assert state_manager.getState().position.z == pytest.approx(0.0)
+    assert state_manager.getState().status == DroneStatusEnum.IDLE
+    assert engine.active_command is None
+
+    assert state_manager.getState().battery < 100
+
+
+def test_multiple_commands_execute_in_sequence():
+    state_manager = StateManager()
+    queue = CommandQueue()
+
+    queue.enqueue(
+        TakeoffCommand(
+            payload=TakeoffPayload(target_altitude=1.0, takeoff_speed=1.0)
+        )
+    )
+    queue.enqueue(
+        LandCommand(payload=LandingPayload(landing_speed=1.0))
+    )
+
+    handler_registry = {
+        CommandTypeEnum.TAKEOFF: _FunctionHandlerAdapter(takeoff_handler.execute),
+        CommandTypeEnum.LAND: _FunctionHandlerAdapter(land_handler.execute),
+    }
+
+    engine = SimulationEngine(
+        state_manager=state_manager,
+        command_queue=queue,
+        handler_registry=handler_registry,
+        timestep=0.05,
+    )
+
+    while engine.active_command is not None or not queue.isEmpty():
+        engine.tick()
+
+    state = state_manager.getState()
+    assert state.position.z == pytest.approx(0.0)
+    assert state.status == DroneStatusEnum.IDLE
+    assert state.battery < 100
+    assert engine.active_command is None
+    assert queue.isEmpty() is True
+
+
 
