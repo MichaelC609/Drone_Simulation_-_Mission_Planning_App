@@ -1,3 +1,5 @@
+from drone.models import DroneStatusEnum
+
 def execute(command, state_manager, dt):
     #get current drone state
     currentState = state_manager.getState()
@@ -14,8 +16,9 @@ def execute(command, state_manager, dt):
     new_altitude = min((altitude + altitude_delta), target_altitude)
 
     #update state manager
-    state_manager.updateState({"position": {"z": new_altitude}})
+    state_manager.updateState({"position": {"z": new_altitude}, "status": DroneStatusEnum.ACTIVE})
 
     #check for completion
     return new_altitude >= target_altitude
+
 

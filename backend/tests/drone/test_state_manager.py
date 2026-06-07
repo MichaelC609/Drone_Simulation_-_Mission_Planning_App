@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from drone.models import DroneState
+from drone.models import DroneState, DroneStatusEnum
 from drone.state_manager import StateManager
 
 
@@ -72,3 +72,11 @@ def test_update_state_refreshes_timestamp_with_current_value():
 
 	assert isinstance(updated_state.timestamp, datetime)
 	assert updated_state.timestamp >= previous_timestamp
+
+
+def test_update_state_accepts_enum_status_value():
+	state_manager = StateManager()
+
+	updated_state = state_manager.updateState({"status": DroneStatusEnum.ACTIVE})
+
+	assert updated_state.status == DroneStatusEnum.ACTIVE
