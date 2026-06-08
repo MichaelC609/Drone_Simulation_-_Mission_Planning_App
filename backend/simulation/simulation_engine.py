@@ -6,6 +6,7 @@
 
 
 from backend.simulation.exceptions import HandlerNotFoundException
+from simulation.handler_registry import HandlerRegistry
 
 
 class SimulationEngine:
@@ -29,7 +30,9 @@ class SimulationEngine:
         #execute command
         if self.active_command is not None:
             command_type = self.active_command.command_type
-            handler = self.handler_registry.get(command_type)
+            handler = self.handler_registry.get_handler(
+                command_type
+            )
 
             if handler is None:
                 raise HandlerNotFoundException(
