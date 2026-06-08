@@ -38,21 +38,11 @@ from drone.commands import (
 )
 from drone.state_manager import StateManager
 from simulation.command_queue import CommandQueue
-from simulation.handlers import takeoff_handler, land_handler
+from simulation.handler_registry import HandlerRegistry
+from simulation.handlers.takeoff_handler import TakeoffHandler
+from simulation.handlers.land_handler import LandHandler
 from simulation.simulation_engine import SimulationEngine
 from drone.models import DroneStatusEnum
-
-################################
-#       UNIT TESTS             #
-################################
-
-class _FunctionHandlerAdapter:
-    def __init__(self, handler_func):
-        self._handler_func = handler_func
-
-    def execute(self, command, state_manager, dt):
-        return self._handler_func(command, state_manager, dt)
-
 
 ################################
 #       Integration TESTS      #
@@ -68,15 +58,14 @@ def test_integration_takeoff_reaches_target_alt():
         )
     )
 
-    handler_registry = {
-        CommandTypeEnum.TAKEOFF: _FunctionHandlerAdapter(takeoff_handler.execute),
-    }
+    handler_registry = HandlerRegistry()
+    handler_registry.register(CommandTypeEnum.TAKEOFF, TakeoffHandler)
 
     engine = SimulationEngine(
         state_manager=state_manager,
         command_queue=queue,
         handler_registry=handler_registry,
-        timestep=0.05,
+        dt=0.05,
     )
 
     while engine.active_command is not None or not queue.isEmpty():
@@ -106,15 +95,14 @@ def test_integration_landing_reaches_ground():
         LandCommand(payload=LandingPayload(landing_speed=1.0))
     )
 
-    handler_registry = {
-        CommandTypeEnum.LAND: _FunctionHandlerAdapter(land_handler.execute),
-    }
+    handler_registry = HandlerRegistry()
+    handler_registry.register(CommandTypeEnum.LAND, LandHandler)
 
     engine = SimulationEngine(
         state_manager=state_manager,
         command_queue=queue,
         handler_registry=handler_registry,
-        timestep=0.05,
+        dt=0.05,
     )
 
     while engine.active_command is not None or not queue.isEmpty():
@@ -140,16 +128,15 @@ def test_multiple_commands_execute_in_sequence():
         LandCommand(payload=LandingPayload(landing_speed=1.0))
     )
 
-    handler_registry = {
-        CommandTypeEnum.TAKEOFF: _FunctionHandlerAdapter(takeoff_handler.execute),
-        CommandTypeEnum.LAND: _FunctionHandlerAdapter(land_handler.execute),
-    }
+    handler_registry = HandlerRegistry()
+    handler_registry.register(CommandTypeEnum.TAKEOFF, TakeoffHandler)
+    handler_registry.register(CommandTypeEnum.LAND, LandHandler)
 
     engine = SimulationEngine(
         state_manager=state_manager,
         command_queue=queue,
         handler_registry=handler_registry,
-        timestep=0.05,
+        dt=0.05,
     )
 
     while engine.active_command is not None or not queue.isEmpty():
@@ -161,6 +148,26 @@ def test_multiple_commands_execute_in_sequence():
     assert state.battery < 100
     assert engine.active_command is None
     assert queue.isEmpty() is True
+
+
+def test_simulation_time_advances_without_commands():
+    state_manager = StateManager()
+    queue = CommandQueue()
+
+    handler_registry = HandlerRegistry()
+
+    engine = SimulationEngine(
+        state_manager=state_manager,
+        command_queue=queue,
+        handler_registry=handler_registry,
+        dt=0.05,
+    )
+
+    assert engine.get_simulation_time() == pytest.approx(0.0)
+
+    engine.tick()
+
+    assert engine.get_simulation_time() == pytest.approx(0.05)
 
 
 

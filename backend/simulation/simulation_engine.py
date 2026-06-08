@@ -11,7 +11,7 @@ from simulation.handler_registry import HandlerRegistry
 
 class SimulationEngine:
     #constructor method
-    def __init__(self, state_manager, command_queue, handler_registry, timestep):
+    def __init__(self, state_manager, command_queue, handler_registry, dt):
         #injected dependencies
         self.state_manager = state_manager
         self.command_queue = command_queue
@@ -19,7 +19,7 @@ class SimulationEngine:
         
         self.active_command = None  
         self.simulation_time = 0.0  #measured in seconds
-        self.dt = timestep  #fixed timestep value
+        self.dt = dt  #fixed timestep value
 
     def tick(self):
         #acquire command
@@ -33,11 +33,6 @@ class SimulationEngine:
             handler = self.handler_registry.get_handler(
                 command_type
             )
-
-            if handler is None:
-                raise HandlerNotFoundException(
-                    f"No handler registered for {command_type}"
-                )
             
             completed = handler.execute(
                 self.active_command,
@@ -48,7 +43,7 @@ class SimulationEngine:
             if completed:
                 self.active_command = None
 
-            self.simulation_time += self.dt
+        self.simulation_time += self.dt
 
     def get_simulation_time(self):
         return self.simulation_time

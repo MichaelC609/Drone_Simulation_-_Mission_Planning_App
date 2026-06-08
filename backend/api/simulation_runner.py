@@ -2,11 +2,14 @@
 #Simulation runs forever in the background
 
 class SimulationRunner:
-    def start():
+    def __init__(self, simulation_engine):
+        self.simulation_engine = simulation_engine
+
+    def start(self):
         ...
 
-    def stop():
+    def stop(self):
         ...
 
-    def run():
+    def run(self):
         ...
