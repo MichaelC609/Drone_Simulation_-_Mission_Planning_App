@@ -170,4 +170,34 @@ def test_simulation_time_advances_without_commands():
     assert engine.get_simulation_time() == pytest.approx(0.05)
 
 
+def test_active_command_blocks_next_queue_command():
+    state_manager = StateManager()
+    queue = CommandQueue()
+    takeoff_command = TakeoffCommand(
+        payload=TakeoffPayload(target_altitude=1.0, takeoff_speed=1.0)
+    )
+    land_command = LandCommand(
+        payload=LandingPayload(landing_speed=1.0)
+    )
+
+    queue.enqueue(takeoff_command)
+    queue.enqueue(land_command)
+
+    handler_registry = HandlerRegistry()
+    handler_registry.register(CommandTypeEnum.TAKEOFF, TakeoffHandler)
+    handler_registry.register(CommandTypeEnum.LAND, LandHandler)
+
+    engine = SimulationEngine(
+        state_manager=state_manager,
+        command_queue=queue,
+        handler_registry=handler_registry,
+        dt=0.05,
+    )
+
+    engine.tick()
+
+    assert engine.active_command is takeoff_command
+    assert queue.size() == 1
+    assert queue.peek() is land_command
+    assert state_manager.getState().position.z == pytest.approx(0.05)
 

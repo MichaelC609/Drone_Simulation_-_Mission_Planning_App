@@ -15,8 +15,8 @@ if str(BACKEND_ROOT) not in sys.path:
 	sys.path.insert(0, str(BACKEND_ROOT))
 
 from drone.models import DroneStatusEnum as DroneStatus, DroneState
-
-from simulation.handlers import takeoff_handler
+from simulation.handlers.takeoff_handler import TakeoffHandler
+from simulation.battery_constants import BATTERY_DRAIN_RATE
 
 
 class _StubStateManager:
@@ -29,6 +29,7 @@ class _StubStateManager:
 		return types.SimpleNamespace(
 			position=types.SimpleNamespace(z=self.altitude),
 			status=self.status,
+			battery = self.battery
 		)
 
 	def updateState(self, update):
@@ -36,6 +37,8 @@ class _StubStateManager:
 			self.altitude = update["position"]["z"]
 		if "status" in update:
 			self.status = update["status"]
+		if "battery" in update:
+			self.battery = update["battery"]
 
 
 def _make_takeoff_command(target_altitude=10.0, takeoff_speed=2.0):
@@ -53,7 +56,7 @@ def test_takeoff_progress_one_tick():
 
 	assert state_manager.status == DroneStatus.IDLE
 
-	completed = takeoff_handler.execute(command=command, state_manager=state_manager, dt=0.05)
+	completed = TakeoffHandler.execute(command=command, state_manager=state_manager, dt=0.05)
 
 	assert state_manager.altitude == pytest.approx(0.1)
 	assert state_manager.status == DroneStatus.ACTIVE
@@ -64,7 +67,7 @@ def test_takeoff_completion_one_tick():
 	state_manager = _StubStateManager(altitude=9.95)
 	command = _make_takeoff_command(target_altitude=10.0, takeoff_speed=2.0)
 
-	completed = takeoff_handler.execute(command=command, state_manager=state_manager, dt=0.05)
+	completed = TakeoffHandler.execute(command=command, state_manager=state_manager, dt=0.05)
 
 	assert state_manager.altitude == pytest.approx(10.0)
 	assert completed is True
@@ -79,11 +82,15 @@ def test_takeoff_battery_drain():
 	dt = 0.05
 
 	#simulate one tick has passed
-	takeoff_handler.execute(
+	TakeoffHandler.execute(
 		command, state_manager, dt
 	)
 
+	expected_battery = 100.0 - (
+		BATTERY_DRAIN_RATE["TAKEOFF"] * dt
+	)
+
 	#test resulting value
-	assert state_manager.battery == pytest.approx(99.9)
+	assert state_manager.battery == pytest.approx(expected_battery)
 	assert state_manager.status == DroneStatus.ACTIVE
 	assert state_manager.altitude == pytest.approx(0.1)
