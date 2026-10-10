@@ -4,3 +4,5 @@ class HandlerNotFoundException(Exception):
 class DuplicateHandlerRegistrationException(Exception):
     pass
 
+class InvalidCommandStateException(Exception):
+    pass
