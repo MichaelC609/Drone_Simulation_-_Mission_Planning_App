@@ -28,6 +28,29 @@ class LandHandler():
         status = DroneStatusEnum.IDLE if new_altitude == target_altitude else DroneStatusEnum.LANDING
         state_manager.updateState({"position": {"z": new_altitude}, "status": status, "battery": new_battery})
 
-        #check for completion
-        return new_altitude == target_altitude
+        #determine if landing is complete -> set status to IDLE and reset velocity
+        completed = new_altitude == 0
+
+        status = (
+            DroneStatusEnum.IDLE if completed 
+                else DroneStatusEnum.LANDING
+        )
+
+        updates = {
+            "position": {"z": new_altitude},
+            "status": status,
+            "battery": new_battery
+        }
+
+        #reset velocity when landing completes
+        if completed:
+            updates["velocity"] = {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+            }
+
+        state_manager.updateState(updates)
+
+        return completed
 
