@@ -22,7 +22,7 @@ class SimulationRunner:
     ########################################################
     def start(self):
         #return task if already exists
-        if self.task:
+        if self.task is not None and not self.task.done():
             return self.task
         
         #create task
@@ -31,6 +31,8 @@ class SimulationRunner:
         )
 
         self.running = True
+
+        return self.task
 
     ########################################################
     #run(): executes simulation forever, advances sim time #
@@ -46,6 +48,9 @@ class SimulationRunner:
 
         except asyncio.CancelledError:
             raise
+
+        finally:
+            self.running = False
 
     ########################################################
     #stop(): cancels running task, awaits cleanup and      #
