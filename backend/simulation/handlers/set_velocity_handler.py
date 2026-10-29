@@ -1,4 +1,5 @@
 class SetVelocityHandler:
+    @staticmethod
     def execute(command, state_manager, dt):
         velocity = {
             "x": command.payload.vx,

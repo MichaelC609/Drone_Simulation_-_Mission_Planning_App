@@ -41,8 +41,18 @@ from simulation.command_queue import CommandQueue
 from simulation.handler_registry import HandlerRegistry
 from simulation.handlers.takeoff_handler import TakeoffHandler
 from simulation.handlers.land_handler import LandHandler
+from simulation.command_validator import CommandValidator
 from simulation.simulation_engine import SimulationEngine
 from drone.models import DroneStatusEnum
+
+
+class FakePhysicsEngine:
+    def __init__(self):
+        self.update_calls = 0
+
+    def update(self, state_manager, dt):
+        self.update_calls += 1
+
 
 ################################
 #       Integration TESTS      #
@@ -65,6 +75,7 @@ def test_integration_takeoff_reaches_target_alt():
         state_manager=state_manager,
         command_queue=queue,
         handler_registry=handler_registry,
+        physics_engine=FakePhysicsEngine(),
         dt=0.05,
     )
 
@@ -102,6 +113,7 @@ def test_integration_landing_reaches_ground():
         state_manager=state_manager,
         command_queue=queue,
         handler_registry=handler_registry,
+        physics_engine=FakePhysicsEngine(),
         dt=0.05,
     )
 
@@ -136,6 +148,7 @@ def test_multiple_commands_execute_in_sequence():
         state_manager=state_manager,
         command_queue=queue,
         handler_registry=handler_registry,
+        physics_engine=FakePhysicsEngine(),
         dt=0.05,
     )
 
@@ -160,6 +173,7 @@ def test_simulation_time_advances_without_commands():
         state_manager=state_manager,
         command_queue=queue,
         handler_registry=handler_registry,
+        physics_engine=FakePhysicsEngine(),
         dt=0.05,
     )
 
@@ -191,6 +205,7 @@ def test_active_command_blocks_next_queue_command():
         state_manager=state_manager,
         command_queue=queue,
         handler_registry=handler_registry,
+        physics_engine=FakePhysicsEngine(),
         dt=0.05,
     )
 
@@ -201,3 +216,75 @@ def test_active_command_blocks_next_queue_command():
     assert queue.peek() is land_command
     assert state_manager.getState().position.z == pytest.approx(0.05)
 
+
+def test_rejected_takeoff_is_logged_and_does_not_skip_physics(caplog):
+    state_manager = StateManager()
+    state_manager.updateState({"status": DroneStatusEnum.ACTIVE})
+    queue = CommandQueue()
+    command = TakeoffCommand(
+        payload=TakeoffPayload(target_altitude=1.0, takeoff_speed=1.0)
+    )
+    queue.enqueue(command)
+
+    handler_registry = HandlerRegistry()
+    handler_registry.register(CommandTypeEnum.TAKEOFF, TakeoffHandler)
+    physics_engine = FakePhysicsEngine()
+    engine = SimulationEngine(
+        state_manager=state_manager,
+        command_queue=queue,
+        handler_registry=handler_registry,
+        physics_engine=physics_engine,
+        dt=0.05,
+    )
+
+    engine.tick()
+
+    assert engine.active_command is None
+    assert queue.isEmpty()
+    assert state_manager.getState().position.z == pytest.approx(0.0)
+    assert physics_engine.update_calls == 1
+    assert engine.get_simulation_time() == pytest.approx(0.05)
+    assert "Cannot execute TAKEOFF while drone status is ACTIVE" in caplog.text
+
+
+def test_active_takeoff_is_not_revalidated_each_tick(monkeypatch):
+    state_manager = StateManager()
+    queue = CommandQueue()
+    queue.enqueue(
+        TakeoffCommand(
+            payload=TakeoffPayload(target_altitude=0.1, takeoff_speed=1.0)
+        )
+    )
+
+    handler_registry = HandlerRegistry()
+    handler_registry.register(CommandTypeEnum.TAKEOFF, TakeoffHandler)
+    physics_engine = FakePhysicsEngine()
+    engine = SimulationEngine(
+        state_manager=state_manager,
+        command_queue=queue,
+        handler_registry=handler_registry,
+        physics_engine=physics_engine,
+        dt=0.05,
+    )
+
+    validation_calls = 0
+    validate = CommandValidator.validate
+
+    def count_validation_calls(command, manager):
+        nonlocal validation_calls
+        validation_calls += 1
+        return validate(command, manager)
+
+    monkeypatch.setattr(
+        CommandValidator,
+        "validate",
+        staticmethod(count_validation_calls),
+    )
+
+    engine.tick()
+    engine.tick()
+
+    assert engine.active_command is None
+    assert state_manager.getState().position.z == pytest.approx(0.1)
+    assert validation_calls == 1
+    assert physics_engine.update_calls == 0

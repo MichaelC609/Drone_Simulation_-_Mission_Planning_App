@@ -2,6 +2,7 @@ from drone.models import DroneStatusEnum
 from simulation.battery_constants import BATTERY_DRAIN_RATE
 
 class TakeoffHandler:
+    @staticmethod
     def execute(command, state_manager, dt):
         #get current drone state
         currentState = state_manager.getState()
