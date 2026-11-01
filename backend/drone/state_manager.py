@@ -8,7 +8,7 @@
 #################################################################################
 
 #necessary imports
-from models import DroneState
+from drone.models import DroneState
 from datetime import datetime
 
 class StateManager: 
