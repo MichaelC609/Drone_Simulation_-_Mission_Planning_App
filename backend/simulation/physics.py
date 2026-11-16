@@ -1,6 +1,7 @@
 from drone.models import DroneStatusEnum
 
 class PhysicsEngine:
+    @staticmethod
     def update(state_manager, dt):
         #retrieve current drone state
         currentState = state_manager.getState()
@@ -19,9 +20,9 @@ class PhysicsEngine:
 
         else:
             #calculate displacement for current tick -> d = v x dt
-            dx = currentVelocity.x * dt
-            dy = currentVelocity.y * dt
-            dz = currentVelocity.z * dt
+            dx = currentVelocity.vx * dt
+            dy = currentVelocity.vy * dt
+            dz = currentVelocity.vz * dt
             
             #calculate new posiiton for current tick -> current pos + delta position
             new_pos_x = currentPos.x + dx

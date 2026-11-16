@@ -34,6 +34,11 @@ class SimulationEngine:
         if self.active_command is None:
             if not self.command_queue.isEmpty():
                 command = self.command_queue.dequeue()
+                print(
+                    f"Dequeued command: {command.command_type}",
+                    flush=True
+                )
+
                 try:
                     CommandValidator.validate(command, self.state_manager)
                 except InvalidCommandStateException as exc:
@@ -49,6 +54,12 @@ class SimulationEngine:
         if self.active_command is not None:
             command_type = self.active_command.command_type
             handler = self.handler_registry.get_handler(command_type)
+
+            print(
+                f"Executing command: {self.active_command.command_type}",
+                flush=True
+            )
+
             completed = handler.execute(
                 self.active_command,
                 self.state_manager,
@@ -60,6 +71,10 @@ class SimulationEngine:
             )
 
             if completed:
+                print(
+                    f"DEBUG: Completed command: {self.active_command.command_type}",
+                    flush=True
+                )
                 self.active_command = None
 
         if not skip_physics:

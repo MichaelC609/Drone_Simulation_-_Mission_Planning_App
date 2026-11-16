@@ -9,6 +9,9 @@
 import asyncio
 from simulation.simulation_engine import SimulationEngine
 
+#debugging
+import traceback
+
 class SimulationRunner:
     def __init__(self, simulation_engine):
         self.simulation_engine = simulation_engine
@@ -49,6 +52,11 @@ class SimulationRunner:
         except asyncio.CancelledError:
             raise
 
+        except Exception:
+            print("DEBUG: Simulation runner crashed", flush=True)
+            traceback.print_exc()
+            raise
+
         finally:
             self.running = False
 
@@ -69,6 +77,10 @@ class SimulationRunner:
 
         except asyncio.CancelledError:
             pass
+
+        except Exception as exc:
+            print(f"Simulation crashed: {type(exc).__name__}: {exc}", flush=True)
+            raise
 
         #perform cleanup
         self.task = None

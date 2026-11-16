@@ -11,6 +11,7 @@ from drone.state_manager import StateManager
 from simulation.command_queue import CommandQueue
 from simulation.handler_registry import HandlerRegistry
 from api.simulation_context import SimulationContext
+from api.routes.simulation import router as simulation_router
 
 ####################################################
 #lifespan():                                       #
@@ -49,3 +50,6 @@ app = FastAPI(
     version = "0.1.0",
     lifespan = lifespan
 )
+
+#register simulation router for api connection
+app.include_router(simulation_router)
