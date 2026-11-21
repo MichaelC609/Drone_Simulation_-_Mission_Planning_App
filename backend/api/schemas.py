@@ -5,17 +5,16 @@
 #   Requirement: pydantic                                                        #
 ##################################################################################
 
-from pydantic import BaseModel, Field
-from drone.models import Position, Velocity, DroneStatusEnum, DroneState
+from pydantic import BaseModel, Field, ConfigDict
+from drone.models import Position, Velocity, DroneStatusEnum
 from typing import Annotated, Union, Literal
 from uuid import UUID
-from pydantic import BaseModel, Field
 
 from drone.commands import (
-    TakeoffCommand,
-    LandCommand,
-    SetVelocityCommand,
-    CommandTypeEnum
+    CommandTypeEnum,
+    TakeoffPayload,
+    LandingPayload,
+    SetVelocityPayload
 )
 
 class DroneStateResponse(BaseModel):
@@ -27,18 +26,34 @@ class DroneStateResponse(BaseModel):
     battery : float     #remaining battery
     simulation_time: float  #elapse time on simulation
 
-CommandRequest = Annotated[
-    Union[
-        TakeoffCommand,
-        LandCommand,
-        SetVelocityCommand
-    ],
-
-    Field(discriminator="command_type")
-]
 
 class CommandResponse(BaseModel):
     command_id: UUID
     command_type: CommandTypeEnum
     status: str
     message: str
+
+class TakeoffRequest(BaseModel):
+    command_type: Literal[CommandTypeEnum.TAKEOFF] = CommandTypeEnum.TAKEOFF
+    payload: TakeoffPayload
+    model_config = ConfigDict(extra="forbid")
+
+class LandRequest(BaseModel):
+    command_type: Literal[CommandTypeEnum.LAND] = CommandTypeEnum.LAND
+    payload: LandingPayload
+    model_config = ConfigDict(extra="forbid")
+
+class SetVelocityRequest(BaseModel):
+    command_type: Literal[CommandTypeEnum.SET_VELOCITY] = CommandTypeEnum.SET_VELOCITY
+    payload: SetVelocityPayload
+    model_config = ConfigDict(extra="forbid")
+
+CommandRequest = Annotated[
+    Union[
+        TakeoffRequest,
+        LandRequest,
+        SetVelocityRequest
+    ],
+
+    Field(discriminator="command_type")
+]

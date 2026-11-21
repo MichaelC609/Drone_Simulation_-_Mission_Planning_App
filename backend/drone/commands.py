@@ -6,7 +6,7 @@
 #################################################################################
 
 #necessary imports for Pydantic and field generation
-from pydantic import AfterValidator, BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field, ConfigDict
 from enum import Enum
 from typing import Annotated, Literal, Union
 import uuid
@@ -53,7 +53,7 @@ class CommandTypeEnum(str, Enum):
 
 ###### Payload base classes ######
 class Payload(BaseModel):
-    pass
+    model_config = ConfigDict(extra="forbid")
 
 class SetVelocityPayload(Payload):
     vx: float = Field(default = 0.0)
@@ -109,3 +109,4 @@ Set_Velocity_Payload = SetVelocityPayload
 Set_Heading_Payload = SetHeadingPayload
 Takeoff_Payload = TakeoffPayload
 Landing_Payload = LandingPayload
+
