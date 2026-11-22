@@ -8,6 +8,7 @@
 from fastapi import APIRouter, Request, Body
 from api.schemas import DroneStateResponse, CommandRequest, CommandResponse
 from simulation.command_queue import CommandQueue
+from api.command_factory import CommandFactory
 
 router = APIRouter(prefix="/simulation", tags=["simulation"])
 
@@ -31,17 +32,21 @@ async def get_simulation_state(request: Request):
 
 #POST method for submittting commands to API
 @router.post("/commands", response_model=CommandResponse, status_code=202)
-async def submit_command(request: Request, command: CommandRequest = Body(...)):
+async def submit_command(request: Request, command_request: CommandRequest = Body(...)):
     sim_context = request.app.state.simulation_context
 
-    #add validated command object to queue
-    sim_context.command_queue.enqueue(command)
 
-    #construct command response
+    #pass validated command request to command creation
+    internal_command = CommandFactory.create(command_request)
+
+    #add internal command to queue
+    sim_context.command_queue.enqueue(internal_command)
+
+    #construct command response for internal command
     response_model = CommandResponse(
-        command_id = command.id,
-        command_type = command.command_type,
-        status = "QUEUED",
+        command_id = internal_command.id,
+        command_type = internal_command.command_type,
+        status = 'QUEUED',
         message = "Command accepted and queued for execution"
     )
 
