@@ -68,5 +68,25 @@ class CommandTracker():
             raise ValueError(f"{new_status} is not a valid transition state for {current_status}")
 
 
+    #mark a command's state as running once it is queued and ready
+    def mark_running(self, command_id: UUID) -> None:
+        #retrieve command record from dict -> raise key error if doesn't exist
+        command_record = self._get_internal_record(command_id)
 
+        #validate transition and set status to running + started_at to current time
+        self._validate_transitions(command_record.status, CommandStatusEnum.RUNNING)
+        command_record.status = CommandStatusEnum.RUNNING
+        command_record.started_at = datetime.now()
+
+
+    #private helper method to retrieve internal record
+    def _get_internal_record(self, command_id: UUID) -> CommandRecord:
+        #retrieve record
+        command_record = self._records.get(command_id)
+
+        #if key exists -> return : else -> raise KeyError
+        if command_record is None:
+            raise KeyError(f"{command_id} does not exist in records")
+
+        return command_record
 
