@@ -2,6 +2,8 @@
 # command_tracker.py:                                                           #    
 #   Responsible for controlling command registration and status updates between #
 #       state transitions, taking in metadata about the command                 #
+#   Requirements:                                                               #
+#       uuid, datetime, /drone, copy                                            #
 #################################################################################
 
 #necessary imports
@@ -89,4 +91,46 @@ class CommandTracker():
             raise KeyError(f"{command_id} does not exist in records")
 
         return command_record
+
+    #marks a command as being completed
+    def mark_completed(self, command_id: UUID) -> None:
+        #retrieve record
+        command_record = self._get_internal_record(command_id)
+
+        #validate command's transition to COMPLETED status
+        self._validate_transitions(command_record.status, CommandStatusEnum.COMPLETED)
+
+        #update status and finished_at time
+        command_record.status = CommandStatusEnum.COMPLETED
+        command_record.finished_at = datetime.now()
+
+    #indicates that a command has failed during execution
+    def mark_failed(self, command_id: UUID, reason: str) -> None:
+        #retrieve record
+        command_record = self._get_internal_record(command_id)
+
+        #validate command's transition to FAILED status
+        self._validate_transitions(command_record.status, CommandStatusEnum.FAILED)
+
+        #update status and finished_at time
+        command_record.status = CommandStatusEnum.FAILED
+        command_record.finished_at = datetime.now()
+
+        command_record.error_message = reason
+
+    #indicates that a command has failed validation before execution
+    def mark_rejected(self, command_id: UUID, reason: str) -> None:
+        #retrieve record
+        command_record = self._get_internal_record(command_id)
+
+        #validate command's transiiton to REJECTED status
+        self._validate_transitions(command_record.status, CommandStatusEnum.REJECTED)
+
+        #update status, finished_at and add error message
+        command_record.status = CommandStatusEnum.REJECTED
+        command_record.finished_at = datetime.now()
+
+        command_record.error_message = reason
+
+
 
