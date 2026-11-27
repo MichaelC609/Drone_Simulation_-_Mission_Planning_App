@@ -1,1 +1,11 @@
 *.cpython-311.pyc
+.gitignore
+backend/drone/__pycache__/command_tracker.cpython-313.pyc
+.gitignore
+.gitignore
+backend/drone/__pycache__/command_tracking.cpython-313.pyc
+backend/drone/__pycache__/commands.cpython-313.pyc
+backend/tests/drone/__pycache__/test_command_tracker.cpython-313-pytest-9.0.3.pyc
+backend/drone/__pycache__/commands.cpython-313.pyc
+backend/drone/__pycache__/commands.cpython-313.pyc
+

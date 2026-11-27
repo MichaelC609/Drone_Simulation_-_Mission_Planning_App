@@ -3,7 +3,7 @@
 #   Responsible for controlling command registration and status updates between #
 #       state transitions, taking in metadata about the command                 #
 #   Requirements:                                                               #
-#       uuid, datetime, /drone, copy                                            #
+#       uuid, datetime, /drone, copy                                            
 #################################################################################
 
 #necessary imports
